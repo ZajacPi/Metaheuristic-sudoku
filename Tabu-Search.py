@@ -32,7 +32,7 @@ def generate_initial_state(sudoku):
     that are missing (in a square there should be all numbers from 1 to 9)
     
     It makes sure there are no duplicates within one square.
-
+    
     It also saves the ampty positions in all_empty_slots: that are the only places that the algorithm can change, 
     the initially filled gaps are fixed
     '''
@@ -64,52 +64,50 @@ def generate_initial_state(sudoku):
             all_empty_slots.append(empty_slots[:])
             
     return sudoku, sudoku_fun(sudoku), all_empty_slots
-                
-def SA_algorithm(sudoku, T, n, alpha, Nmax):
+
+
+def TS_algorithm(sudoku, tabu_list_size, neighborhood_size, Nmax):
     '''
-    fun - function that we want to minimise
-    T - the initial temperature (how to choose initial temperature is complex)
-    n - number of iterations before lowering the temperature
-    alpha - cooling rate (value in range (0, 1))
+    sudoku - a list of lists sudoku with zeros in empty spaces
+    tabu_list_size - maximum length of tabu list, if we fill it completely we should delete the oldest entry    
     Nmax - maxinmum number of iterations
     '''
     
-    #let's generate an initial state by making a random choice, by filling the 3x3 boxes with missing numbers randomly
-    # that way, we have duplicates only in rows and cols
     best_solution, best_value, all_empty_slots = generate_initial_state(sudoku)
-    k = 1
-    
-    while k < Nmax and best_value > 0:
-        for i in range(0, n):
-            #for the candidate, we switch two numbers in a randomly selected square
+    tabu_list = []
+    for i in range(Nmax):
+        best_candidate, best_candidate_value = None, float('inf')
+        for _ in range(neighborhood_size):
+            # let's generate a neighbour
             candidate = copy.deepcopy(best_solution)
-            
             random_square = random.choice(all_empty_slots)
-
             slot1, slot2 = random.sample(random_square, 2)
 
             candidate[slot1[0]][slot1[1]], candidate[slot2[0]][slot2[1]] = candidate[slot2[0]][slot2[1]], candidate[slot1[0]][slot1[1]]
-             
-            candidate_value = sudoku_fun(candidate)
             
-            if candidate_value < best_value:
-                best_solution, best_value = candidate, candidate_value
-                
-            #decide wether to change to worse solution by checking acceptance probability
-            elif T> 1:
-                probability = math.exp(-(candidate_value - best_value) / T)
-                if random.random() <= probability:
-                   best_solution, best_value = candidate, candidate_value
-        if T > 1:
-            # after n tries, we lower the temperature and increase the counter  
-            T = T*alpha 
-        k+= 1
-        if k%50 == 0:
-            print(f"T={T}: {best_value}")
+            # now, we have to check if he is in tabu list
+            if candidate not in tabu_list:
+                candidate_value = sudoku_fun(candidate)
+                if candidate_value < best_candidate_value:
+                    best_candidate, best_candidate_value = candidate, candidate_value
             
-    print(best_solution)
-    print(best_value)
+        # update tabu list
+        tabu_list.append(best_candidate) 
+        
+        # check if the best neighbour is better than the overall best solution
+        if best_candidate_value < best_value:
+            best_solution, best_value = best_candidate, best_candidate_value
 
+        # Debugging information
+        if i % 50 == 0:
+            print(f"Iteration {i}, Best Value: {best_value}")
+
+                
+        if len(tabu_list) > tabu_list_size:
+                tabu_list.pop(0)
+    
+    print(best_value)
+    return best_solution
 if __name__ == "__main__":
     sudoku = [[0, 1, 0, 6, 3, 0, 0, 0, 4],
               [0, 0, 6, 0, 0, 0, 0, 0, 0],
@@ -120,4 +118,9 @@ if __name__ == "__main__":
               [6, 0, 0, 2, 0, 0, 0, 1, 8],
               [0, 0, 0, 0, 0, 0, 4, 0, 0],
               [7, 0, 0, 0, 1, 4, 0, 5, 0]]
-    SA_algorithm(sudoku, 10000, 200, 0.99, 3000)
+    # Solve the Sudoku
+    solution = TS_algorithm(sudoku, tabu_list_size=100, neighborhood_size=50,  Nmax=1000)
+
+    print("\nSolved Sudoku:")
+    for row in solution:
+        print(row)
