@@ -26,6 +26,12 @@ def sudoku_fun(sudoku):
     
     return rows_sum + cols_sum
 
+### I will try to do it with objects, that contain the sudoku version, calsulated solution, and empty space 
+class Child:
+    def __init__(self, board, cost):
+        self.board = board
+        self.cost = cost
+
 def generate_initial_state(sudoku):
     '''
     Function that generates initial state for a sudoku, by filling the empty gaps in the square with the numbers
@@ -64,53 +70,39 @@ def generate_initial_state(sudoku):
             
     return sudoku, sudoku_fun(sudoku), all_empty_slots
 
-
-def TS_algorithm(sudoku, tabu_list_size, neighborhood_size, Nmax):
+# I have problem with mating, in this approach where the numbers in a square are fixed it might not work
+####################################################
+def Genetic_Algorithm(sudoku, population_size, Nmax):
     '''
     sudoku - a list of lists sudoku with zeros in empty spaces
-    tabu_list_size - maximum length of tabu list, if we fill it completely we should delete the oldest entry  
-    neighbourhood_size - number of neighbours for a current best solution, we choose the best neighbour and check 
-    if it is better than the current best solution  
+    population_size - how many childeren should we generate?
     Nmax - maxinmum number of iterations
     '''
+    generation = 1
+    population = []
+    best_value = float('inf')
+    best_solution = None
     
-    best_solution, best_value, all_empty_slots = generate_initial_state(sudoku)
-    tabu_list = []
-    for n in range(Nmax):
-        best_candidate, best_candidate_value = None, float('inf')
-        for _ in range(neighborhood_size):
-            # let's generate a neighbour
-            candidate = copy.deepcopy(best_solution)
-            random_square = random.choice(all_empty_slots)
-            slot1, slot2 = random.sample(random_square, 2)
+    # generate initial population
+    for _ in range(population_size):
+        child = generate_initial_state(copy.deepcopy(sudoku))
+        if child[1] == 0:
+                print("Found solution!")
+                return child
+        population.append(child)
 
-            candidate[slot1[0]][slot1[1]], candidate[slot2[0]][slot2[1]] = candidate[slot2[0]][slot2[1]], candidate[slot1[0]][slot1[1]]
-            
-            # now, we have to check if he is in tabu list
-            if candidate not in tabu_list:
-                candidate_value = sudoku_fun(candidate)
-                if candidate_value < best_candidate_value:
-                    best_candidate, best_candidate_value = candidate, candidate_value
-            
-        # update tabu list
-        tabu_list.append(best_candidate) 
+    n=0 
+    while best_value > 0 and n < Nmax:        
+        # if we didn't find a sudoku with cost 0, we generate a new, better generation
+        # let's try elite-selection, 10% of best children will have a chance to become parents
+        sorted_generation = sorted(population, key=lambda tup: tup[1])
+        new_generation = sorted_generation[0:int(0.1 * population_size)]
+        best_child = sorted_generation[0]
         
-        # check if the best neighbour is better than the overall best solution
-        if best_candidate_value < best_value:
-            best_solution, best_value = best_candidate, best_candidate_value
-
-        # Debugging information
         if n % 50 == 0:
             print(f"Iteration {n}, Best Value: {best_value}")
-
-                
-        if len(tabu_list) > tabu_list_size:
-                tabu_list.pop(0)
-    
-    print(best_value)
     return best_solution
-
-
+            
 
 if __name__ == "__main__":
     sudoku = [[0, 1, 0, 6, 3, 0, 0, 0, 4],
@@ -123,7 +115,7 @@ if __name__ == "__main__":
               [0, 0, 0, 0, 0, 0, 4, 0, 0],
               [7, 0, 0, 0, 1, 4, 0, 5, 0]]
     # Solve the Sudoku
-    solution = TS_algorithm(sudoku, tabu_list_size=100, neighborhood_size=50,  Nmax=1000)
+    solution = Genetic_Algorithm(sudoku, 100, Nmax=1000)
 
     print("\nSolved Sudoku:")
     for row in solution:

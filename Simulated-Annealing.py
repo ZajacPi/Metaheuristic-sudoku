@@ -53,23 +53,21 @@ def generate_initial_state(sudoku):
                         missing_numbers.remove(sudoku[3*k + i][3*l + j])
                     else:
                         empty_slots.append((3*k+i, 3*l+j))
-            #found all the missing numbers, now lets put them randomly!
             for coordinates in empty_slots:
-                #mabye use random.choice?
-                num = random.randrange(0, len(missing_numbers))
-                sudoku[coordinates[0]][coordinates[1]] = missing_numbers[num]
-                missing_numbers.pop(num)
+                num = random.choice(missing_numbers)
+                sudoku[coordinates[0]][coordinates[1]] = num
+                missing_numbers.remove(num)
                 
             # remember the empty slots for the current square
             all_empty_slots.append(empty_slots[:])
             
     return sudoku, sudoku_fun(sudoku), all_empty_slots
                 
-def SA_algorithm(sudoku, T, n, alpha, Nmax):
+def SA_algorithm(sudoku, T, k, alpha, Nmax):
     '''
     fun - function that we want to minimise
     T - the initial temperature (how to choose initial temperature is complex)
-    n - number of iterations before lowering the temperature
+    k - number of iterations before lowering the temperature
     alpha - cooling rate (value in range (0, 1))
     Nmax - maxinmum number of iterations
     '''
@@ -77,10 +75,11 @@ def SA_algorithm(sudoku, T, n, alpha, Nmax):
     #let's generate an initial state by making a random choice, by filling the 3x3 boxes with missing numbers randomly
     # that way, we have duplicates only in rows and cols
     best_solution, best_value, all_empty_slots = generate_initial_state(sudoku)
-    k = 1
+    n = 1
     
-    while k < Nmax and best_value > 0:
-        for i in range(0, n):
+    while n < Nmax and best_value > 0:
+        for i in range(0, k):
+            ######################### what if in the same temperature we should analise the same base best, and create neighbours for it? because now in the same temp I create neighbours for neighbours
             #for the candidate, we switch two numbers in a randomly selected square
             candidate = copy.deepcopy(best_solution)
             
@@ -103,8 +102,8 @@ def SA_algorithm(sudoku, T, n, alpha, Nmax):
         if T > 1:
             # after n tries, we lower the temperature and increase the counter  
             T = T*alpha 
-        k+= 1
-        if k%50 == 0:
+        n += 1
+        if n%50 == 0:
             print(f"T={T}: {best_value}")
             
     print(best_solution)
